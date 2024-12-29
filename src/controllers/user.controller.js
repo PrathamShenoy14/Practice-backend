@@ -1,7 +1,7 @@
 import {asyncHandler} from '../utils/asyncHandler.js'
 import {ApiError} from '../utils/ApiError.js'
 import {User} from '../models/user.model.js'
-import {uploadOnCloudinary} from '../utils/cloudinary.js'
+import {uploadOnCloudinary,deleteOnCloudinary} from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import jwt from "jsonwebtoken"
 
@@ -196,7 +196,7 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
     await user.save({validateBeforeSave:false})
 
     return res
-    status(200)
+    .status(200)
     .json(new ApiResponse(200,{},"Password succesfully changed"))
 
 })
@@ -237,14 +237,13 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Error while uploading avatar")
     }
 
-    const user = await User.findByIdAndUpdate(req.user?._id,
-        {
-            $set: {avatar:avatar.url}
-        },
-        {
-            new:true
-        }
-    ).select("-password -refreshToken")
+    const user = await User.findById(req.user?._id,).select("-password -refreshToken")
+
+    oldAvatar = user.avatar
+    user.avatar = avatar.url
+
+    await deleteOnCloudinary(oldAvatar);
+    await user.save({validateBeforeSave})
 
     return res
     .status(200)
@@ -265,14 +264,13 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Error while uploading Cover Image")
     }
 
-    const user = await User.findByIdAndUpdate(req.user?._id,
-        {
-            $set: {coverImage:coverImage.url}
-        },
-        {
-            new:true
-        }
-    ).select("-password -refreshToken")
+    const user = await User.findById(req.user?._id,).select("-password -refreshToken")
+
+    oldCoverImage = user.coverImage
+    user.coverImage= coverImage.url
+
+    await deleteOnCloudinary(oldCoverImage);
+    await user.save({validateBeforeSave})
 
     return res
     .status(200)
